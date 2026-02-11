@@ -1408,6 +1408,94 @@
             display: block;
         }
 
+        /* Image Preview Modal */
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            animation: fadeIn 0.3s;
+        }
+
+        .image-modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .image-modal-content {
+            position: relative;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+        }
+
+        .image-modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            color: #7f8c8d;
+            font-size: 2.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .image-modal-close:hover {
+            color: #2c3e50;
+        }
+
+        #modal-image {
+            max-width: 100%;
+            max-height: 70vh;
+            display: block;
+            margin: 0 auto;
+            border-radius: 8px;
+        }
+
+        .image-modal-title {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        /* Image Thumbnail in Table */
+        .image-thumbnail {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 2px solid #ecf0f1;
+        }
+
+        .image-thumbnail:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            border-color: #4a69bd;
+        }
+
+        .no-image-text {
+            color: #95a5a6;
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
         /* Enhanced dropdown items for mobile */
         @media (max-width: 768px) {
             .dropdown-item {
@@ -1623,6 +1711,7 @@
                             <thead>
                                 <tr>
                                     <th>DCR</th>
+                                    <th>IMAGE</th>
                                     <th>BRAND</th>
                                     <th>NAME</th>
                                     <th>LAUNCH DATE</th>
@@ -1717,6 +1806,15 @@
         </div>
         <div id="mobile-dropdown-content">
             <!-- Populated dynamically -->
+        </div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div class="image-modal" id="image-modal" onclick="closeImageModal()">
+        <div class="image-modal-content" onclick="event.stopPropagation()">
+            <span class="image-modal-close" onclick="closeImageModal()">×</span>
+            <img id="modal-image" src="" alt="Product Image">
+            <div id="modal-image-title" class="image-modal-title"></div>
         </div>
     </div>
 
@@ -1846,20 +1944,38 @@
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
-            allData = jsonData.map(row => ({
-                id: row['DCR'] || row['Project ID'] || '',
-                brand: row['Brand'] || '',
-                finalName: row['Final Name'] || '',
-                fragranceStatus: row['Fragrance Status'] || 'Pending',
-                overallStatus: row['Overall Status'] || '',
-                bottleStatus: row['Bottle Status'] || 'Not Ordered',
-                bottleETA: row['Bottle ETA'] ? parseDate(row['Bottle ETA']) : null,
-                boxStatus: row['Box Status'] || 'Not Ordered',
-                boxETA: row['Box ETA'] ? parseDate(row['Box ETA']) : null,
-                oilStatus: row['Oil Status'] || 'Not Ordered',
-                oilETA: row['Oil ETA'] ? parseDate(row['Oil ETA']) : null,
-                launchDate: row['Launch Date'] ? parseDate(row['Launch Date']) : null
-            }));
+            allData = jsonData.map(row => {
+                // Determine material statuses based on user's Excel structure
+                // If Received Date exists → "Received"
+                // Else if Order Status = "Ordered" → "Ordered" 
+                // Else → "Not Ordered"
+                
+                const bottleStatus = row['Bottle Received Date'] ? 'Received' : 
+                                   (row['Bottle Order Status'] && row['Bottle Order Status'].toString().trim() === 'Ordered' ? 'Ordered' : 'Not Ordered');
+                
+                const boxStatus = row['Box Received Date'] ? 'Received' :
+                                (row['Box Order Status'] && row['Box Order Status'].toString().trim() === 'Ordered' ? 'Ordered' : 'Not Ordered');
+                
+                const oilStatus = row['Oil Received Date'] ? 'Received' :
+                                (row['Oil Order Status'] && row['Oil Order Status'].toString().trim() === 'Ordered' ? 'Ordered' : 'Not Ordered');
+                
+                return {
+                    id: row['Project ID'] || row['DCR'] || '',
+                    brand: row['Brand'] || '',
+                    finalName: row['Final Name'] || '',
+                    fragranceStatus: row['Fragrance Status'] || 'Pending',
+                    overallStatus: row['Overall Status'] || '',
+                    bottleStatus: bottleStatus,
+                    bottleETA: row['Bottle ETA'] ? parseDate(row['Bottle ETA']) : null,
+                    boxStatus: boxStatus,
+                    boxETA: row['Box ETA'] ? parseDate(row['Box ETA']) : null,
+                    oilStatus: oilStatus,
+                    oilETA: row['Oil ETA'] ? parseDate(row['Oil ETA']) : null,
+                    launchDate: row['Launch Date'] ? parseDate(row['Launch Date']) : null,
+                    imageUrl: row['Image URL'] || row['Image'] || '',
+                    riskLevel: row['Risk Level'] || '' // Optional: use existing risk if present
+                };
+            });
 
             originalData = [...allData]; // Store original for reset
             filteredData = [...allData];
@@ -2113,6 +2229,7 @@
             tableBody.innerHTML = displayData.map(item => `
                 <tr>
                     <td>${item.id}</td>
+                    <td>${getImageHTML(item.imageUrl, item.finalName)}</td>
                     <td>${item.brand}</td>
                     <td>${item.finalName}</td>
                     <td>${formatDate(item.launchDate)}</td>
@@ -2167,6 +2284,36 @@
                 return '<span class="material-status not-ordered">❌ Not Ordered</span>';
             }
         }
+
+        function getImageHTML(imageUrl, productName) {
+            if (imageUrl && imageUrl.trim()) {
+                return `<img src="${imageUrl}" alt="${productName}" class="image-thumbnail" onclick="openImageModal('${imageUrl}', '${productName}')" title="Click to preview">`;
+            } else {
+                return '<span class="no-image-text">No image</span>';
+            }
+        }
+
+        function openImageModal(imageUrl, productName) {
+            const modal = document.getElementById('image-modal');
+            const modalImage = document.getElementById('modal-image');
+            const modalTitle = document.getElementById('modal-image-title');
+            
+            modalImage.src = imageUrl;
+            modalTitle.textContent = productName;
+            modal.classList.add('active');
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('image-modal');
+            modal.classList.remove('active');
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeImageModal();
+            }
+        });
 
         // Risk tab switching
         document.getElementById('risk-tab-all').addEventListener('click', () => {
