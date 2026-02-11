@@ -1,0 +1,2361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NPD Tracking Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Smooth scrolling for all scrollable elements */
+        * {
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #4a69bd 0%, #6a89cc 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-icon {
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: transform 0.2s;
+        }
+
+        .header-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .profile {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .profile-img {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4a69bd;
+            font-weight: bold;
+        }
+
+        /* Layout */
+        .container {
+            display: flex;
+            height: calc(100vh - 65px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 120px;
+            background: #2c3e50;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem 0;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        /* Mobile Bottom Navigation */
+        .mobile-nav {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .mobile-nav {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: #2c3e50;
+                z-index: 998;
+                justify-content: space-around;
+                padding: 0.75rem 0.5rem;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+            }
+
+            .mobile-nav-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 0.25rem;
+                color: #ecf0f1;
+                cursor: pointer;
+                padding: 0.5rem;
+                border-radius: 8px;
+                transition: all 0.2s;
+                flex: 1;
+                max-width: 80px;
+            }
+
+            .mobile-nav-item:active {
+                background: rgba(255,255,255,0.1);
+                transform: scale(0.95);
+            }
+
+            .mobile-nav-icon {
+                font-size: 1.5rem;
+            }
+
+            .mobile-nav-label {
+                font-size: 0.65rem;
+                text-align: center;
+            }
+        }
+
+        .sidebar-item {
+            padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            color: #ecf0f1;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+            position: relative;
+        }
+
+        .sidebar-item:hover {
+            background: rgba(255,255,255,0.1);
+            border-left-color: #3498db;
+        }
+
+        .sidebar-item.active {
+            background: rgba(52, 152, 219, 0.2);
+            border-left-color: #3498db;
+        }
+
+        .sidebar-icon {
+            font-size: 1.75rem;
+        }
+
+        .sidebar-label {
+            font-size: 0.75rem;
+            text-align: center;
+        }
+
+        /* Dropdown */
+        .dropdown-menu {
+            position: absolute;
+            left: 120px;
+            top: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-width: 200px;
+            display: none;
+            z-index: 1000;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .sidebar-item:hover .dropdown-menu,
+        .dropdown-menu:hover {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            color: #2c3e50;
+        }
+
+        .dropdown-item:hover {
+            background: #ecf0f1;
+        }
+
+        .dropdown-item input {
+            margin-right: 0.5rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            background: rgba(255,255,255,0.05);
+            padding-bottom: 5rem; /* Space for mobile nav */
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1rem;
+                padding-bottom: 6rem;
+            }
+        }
+
+        /* Upload Button */
+        .upload-button-container {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .upload-toggle-btn {
+            background: linear-gradient(135deg, #4a69bd 0%, #6a89cc 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(74, 105, 189, 0.3);
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-upload-btn {
+            padding: 0.75rem 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        .upload-toggle-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(74, 105, 189, 0.4);
+        }
+
+        .upload-toggle-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Reset Button */
+        .reset-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+            transition: all 0.3s;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .reset-button:hover {
+            transform: scale(1.1) rotate(180deg);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+        }
+
+        .reset-button:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            .reset-button {
+                bottom: 5.5rem; /* Above mobile nav */
+                right: 1rem;
+                width: 45px;
+                height: 45px;
+                font-size: 1.3rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .reset-button {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Upload Section */
+        .upload-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .upload-section.visible {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .upload-area {
+            border: 2px dashed #4a69bd;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #3498db;
+            background: rgba(74, 105, 189, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: #3498db;
+            background: rgba(74, 105, 189, 0.1);
+        }
+
+        /* KPI Cards */
+        .kpi-section {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+
+        .kpi-card.designing::before { background: #3498db; }
+        .kpi-card.sampling::before { background: #e67e22; }
+        .kpi-card.approval::before { background: #16a085; }
+        .kpi-card.approved::before { background: #8e44ad; }
+
+        .kpi-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .kpi-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+
+        .kpi-card.designing .kpi-value { color: #3498db; }
+        .kpi-card.sampling .kpi-value { color: #e67e22; }
+        .kpi-card.approval .kpi-value { color: #16a085; }
+        .kpi-card.approved .kpi-value { color: #8e44ad; }
+
+        .kpi-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.25rem;
+        }
+
+        .kpi-subtitle {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+        }
+
+        /* Fragrance Board */
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .section-title:hover {
+            background: #f8f9fa;
+        }
+
+        .section-toggle-icon {
+            transition: transform 0.3s;
+            font-size: 1.2rem;
+        }
+
+        .section-toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .section-content {
+            max-height: 5000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .section-content.collapsed {
+            max-height: 0;
+        }
+
+        .fragrance-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .board-column {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            min-height: 300px;
+        }
+
+        .board-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid;
+        }
+
+        .board-column.pending .board-header { border-color: #e67e22; }
+        .board-column.direction-set .board-header { border-color: #f39c12; }
+        .board-column.finalized .board-header { border-color: #16a085; }
+
+        .board-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .board-icon {
+            font-size: 1.25rem;
+        }
+
+        .board-column.pending .board-icon { color: #e67e22; }
+        .board-column.direction-set .board-icon { color: #f39c12; }
+        .board-column.finalized .board-icon { color: #16a085; }
+
+        .board-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .board-count {
+            background: #ecf0f1;
+            color: #2c3e50;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .board-subtitle {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-bottom: 1rem;
+        }
+
+        .board-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 500px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 0.5rem;
+        }
+
+        .board-cards::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .board-cards::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .board-cards::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        .board-cards::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .board-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            border-left: 4px solid;
+            transition: all 0.3s;
+            cursor: default;
+        }
+
+        .board-column.pending .board-card { border-color: #e67e22; }
+        .board-column.direction-set .board-card { border-color: #f39c12; }
+        .board-column.finalized .board-card { border-color: #16a085; }
+
+        .board-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .board-card-dcr {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .board-card-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.25rem;
+        }
+
+        .board-card-brand {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+        }
+
+        /* ETA Tracker */
+        .eta-tracker {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        }
+
+        .risk-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .risk-tab {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .risk-tab.all {
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+            border: 2px solid rgba(52, 152, 219, 0.3);
+        }
+
+        .risk-tab.all.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .risk-tab.high {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border: 2px solid rgba(220, 53, 69, 0.3);
+        }
+
+        .risk-tab.high.active {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        .risk-tab.medium {
+            background: rgba(243, 156, 18, 0.1);
+            color: #f39c12;
+            border: 2px solid rgba(243, 156, 18, 0.3);
+        }
+
+        .risk-tab.medium.active {
+            background: #f39c12;
+            color: white;
+            border-color: #f39c12;
+        }
+
+        .risk-tab.low {
+            background: rgba(39, 174, 96, 0.1);
+            color: #27ae60;
+            border: 2px solid rgba(39, 174, 96, 0.3);
+        }
+
+        .risk-tab.low.active {
+            background: #27ae60;
+            color: white;
+            border-color: #27ae60;
+        }
+
+        .risk-tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .eta-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .eta-table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .scroll-hint {
+            display: none;
+            position: sticky;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(74, 105, 189, 0.9);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 4px 0 0 4px;
+            font-size: 0.75rem;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .eta-table-container:not(.scrolled) .scroll-hint {
+                display: block;
+            }
+        }
+
+        .eta-table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .eta-table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .eta-table-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .eta-table-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Mobile Card View for ETA Tracker */
+        .eta-cards {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .eta-table-wrapper {
+                position: relative;
+            }
+
+            .view-toggle {
+                display: flex;
+                gap: 0.5rem;
+                margin-bottom: 1rem;
+                justify-content: center;
+            }
+
+            .view-toggle-btn {
+                padding: 0.5rem 1rem;
+                border: 2px solid #4a69bd;
+                background: white;
+                color: #4a69bd;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            .view-toggle-btn.active {
+                background: #4a69bd;
+                color: white;
+            }
+
+            .eta-cards {
+                display: none;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .eta-cards.active {
+                display: flex;
+            }
+
+            .eta-table-container.hidden {
+                display: none;
+            }
+
+            .eta-card {
+                background: white;
+                border-radius: 8px;
+                padding: 1rem;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                border-left: 4px solid;
+            }
+
+            .eta-card.high { border-left-color: #dc3545; }
+            .eta-card.medium { border-left-color: #f39c12; }
+            .eta-card.low { border-left-color: #27ae60; }
+
+            .eta-card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: start;
+                margin-bottom: 0.75rem;
+            }
+
+            .eta-card-title {
+                font-size: 1rem;
+                font-weight: 700;
+                color: #2c3e50;
+            }
+
+            .eta-card-dcr {
+                font-size: 0.8rem;
+                color: #7f8c8d;
+                margin-top: 0.25rem;
+            }
+
+            .eta-card-info {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .eta-card-field {
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .eta-card-label {
+                font-size: 0.7rem;
+                color: #7f8c8d;
+                text-transform: uppercase;
+                font-weight: 600;
+            }
+
+            .eta-card-value {
+                font-size: 0.85rem;
+                color: #2c3e50;
+                font-weight: 600;
+            }
+
+            .eta-card-materials {
+                display: flex;
+                gap: 0.5rem;
+                flex-wrap: wrap;
+                padding-top: 0.75rem;
+                border-top: 1px solid #ecf0f1;
+            }
+        }
+
+        .eta-table thead {
+            background: #ecf0f1;
+        }
+
+        .eta-table th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 700;
+            color: #2c3e50;
+            white-space: nowrap;
+        }
+
+        .eta-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .eta-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .risk-badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .risk-badge.high {
+            background: #dc3545;
+            color: white;
+        }
+
+        .risk-badge.medium {
+            background: #f39c12;
+            color: white;
+        }
+
+        .risk-badge.low {
+            background: #27ae60;
+            color: white;
+        }
+
+        .material-status {
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            display: inline-block;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .material-status.not-ordered {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+
+        .material-status.ordered {
+            background: rgba(243, 156, 18, 0.1);
+            color: #f39c12;
+        }
+
+        .material-status.received {
+            background: rgba(39, 174, 96, 0.1);
+            color: #27ae60;
+        }
+
+        /* Timeline */
+        .timeline-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        }
+
+        .timeline-filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .timeline-filter {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .timeline-filter input[type="radio"] {
+            cursor: pointer;
+        }
+
+        .timeline-chart {
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .timeline-chart::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .timeline-chart::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .timeline-chart::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .timeline-chart::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .timeline-months {
+            display: flex;
+            border-bottom: 2px solid #ecf0f1;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+        }
+
+        .timeline-month-label {
+            flex: 1;
+            text-align: center;
+            font-weight: 600;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            min-width: 100px;
+        }
+
+        .timeline-row {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #ecf0f1;
+            position: relative;
+        }
+
+        .timeline-bar-container {
+            width: 100%;
+            position: relative;
+            height: 40px;
+            min-width: 800px;
+        }
+
+        .timeline-bar {
+            position: absolute;
+            height: 35px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding: 0 0.75rem;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .timeline-bar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .timeline-bar.high { background: #dc3545; }
+        .timeline-bar.medium { background: #f39c12; }
+        .timeline-bar.low { background: #27ae60; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-title {
+                font-size: 1rem;
+            }
+
+            .header-upload-btn {
+                padding: 0.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .kpi-section {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .kpi-card {
+                padding: 1rem;
+            }
+
+            .kpi-icon {
+                font-size: 1.5rem;
+            }
+
+            .kpi-value {
+                font-size: 2rem;
+            }
+
+            .kpi-label {
+                font-size: 0.9rem;
+            }
+
+            .kpi-subtitle {
+                font-size: 0.75rem;
+            }
+
+            .fragrance-board {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .board-column {
+                padding: 1rem;
+            }
+
+            .board-cards {
+                max-height: 300px;
+            }
+
+            .section-title {
+                font-size: 1.2rem;
+                padding: 0.75rem 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .risk-tabs {
+                gap: 0.5rem;
+            }
+
+            .risk-tab {
+                padding: 0.6rem 1rem;
+                font-size: 0.85rem;
+                flex: 1;
+                min-width: auto;
+                justify-content: center;
+            }
+
+            .risk-tab span:first-child {
+                display: none; /* Hide icons on mobile for space */
+            }
+
+            .eta-table-container {
+                max-height: 400px;
+                font-size: 0.85rem;
+            }
+
+            .eta-table th,
+            .eta-table td {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            .material-status,
+            .risk-badge {
+                font-size: 0.7rem;
+                padding: 0.25rem 0.5rem;
+            }
+
+            .timeline-filters {
+                gap: 0.5rem;
+            }
+
+            .timeline-filter {
+                font-size: 0.85rem;
+            }
+
+            .timeline-filter label {
+                font-size: 0.85rem;
+            }
+
+            .timeline-month-label {
+                font-size: 0.8rem;
+                min-width: 60px;
+            }
+
+            .timeline-bar {
+                font-size: 0.7rem;
+                padding: 0 0.5rem;
+                width: 100px !important;
+            }
+
+            /* Mobile dropdown enhancements */
+            .mobile-dropdown {
+                max-height: 70vh;
+                padding: 1.5rem 1rem;
+            }
+
+            .dropdown-item {
+                padding: 1rem;
+                font-size: 0.95rem;
+                border-bottom: 1px solid #f0f0f0;
+            }
+
+            .dropdown-item:last-child {
+                border-bottom: none;
+            }
+
+            /* Upload section mobile */
+            .upload-section {
+                padding: 1rem;
+            }
+
+            .upload-area {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo {
+                font-size: 1.2rem;
+            }
+
+            .header-title {
+                font-size: 0.9rem;
+            }
+
+            .header-upload-btn {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+                gap: 0.25rem;
+            }
+
+            .header-upload-btn::before {
+                content: '📁';
+                font-size: 1rem;
+            }
+
+            .header-upload-btn {
+                font-size: 0;
+            }
+
+            .header-upload-btn::before {
+                font-size: 1.2rem;
+            }
+
+            .kpi-section {
+                gap: 0.75rem;
+            }
+
+            .kpi-card {
+                padding: 0.75rem;
+            }
+
+            .kpi-value {
+                font-size: 1.75rem;
+            }
+
+            .section-title {
+                font-size: 1.1rem;
+                padding: 0.6rem 0.75rem;
+            }
+
+            .section-toggle-icon {
+                font-size: 1rem;
+            }
+
+            .risk-tabs {
+                flex-wrap: wrap;
+            }
+
+            .risk-tab {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.75rem;
+                min-width: calc(50% - 0.25rem);
+            }
+
+            .eta-table th,
+            .eta-table td {
+                padding: 0.5rem 0.35rem;
+                font-size: 0.75rem;
+            }
+
+            .timeline-month-label {
+                font-size: 0.7rem;
+                min-width: 50px;
+            }
+
+            .timeline-chart {
+                max-height: 350px;
+            }
+
+            .board-name {
+                font-size: 0.95rem;
+            }
+
+            .board-subtitle {
+                font-size: 0.75rem;
+            }
+
+            .board-card-name {
+                font-size: 0.9rem;
+            }
+
+            .board-card-dcr,
+            .board-card-brand {
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #7f8c8d;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 3rem;
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        /* Search */
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #4a69bd;
+            box-shadow: 0 0 0 3px rgba(74, 105, 189, 0.1);
+        }
+
+        /* Mobile Dropdown */
+        .mobile-dropdown {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            max-height: 60vh;
+            overflow-y: auto;
+            z-index: 2000;
+            padding: 1rem;
+        }
+
+        .mobile-dropdown.active {
+            display: block;
+        }
+
+        .mobile-dropdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        /* Mobile Dropdown */
+        .mobile-dropdown {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            max-height: 60vh;
+            overflow-y: auto;
+            z-index: 2000;
+            padding: 1rem;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .mobile-dropdown.active {
+            display: block;
+        }
+
+        .mobile-dropdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #ecf0f1;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 1;
+        }
+
+        .mobile-dropdown-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .mobile-dropdown-close {
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #7f8c8d;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .mobile-dropdown-close:active {
+            background: rgba(0,0,0,0.05);
+            transform: scale(0.9);
+        }
+
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1999;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .mobile-overlay.active {
+            display: block;
+        }
+
+        /* Enhanced dropdown items for mobile */
+        @media (max-width: 768px) {
+            .dropdown-item {
+                padding: 1rem;
+                border-bottom: 1px solid #f0f0f0;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .dropdown-item input[type="checkbox"] {
+                width: 20px;
+                height: 20px;
+                cursor: pointer;
+            }
+
+            .dropdown-item label {
+                flex: 1;
+                cursor: pointer;
+                font-size: 0.95rem;
+            }
+
+            .search-input {
+                padding: 1rem;
+                font-size: 1rem;
+                border-radius: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo">◐</div>
+            <div class="header-title">NPD Report Dashboard</div>
+        </div>
+        <div class="header-right">
+            <button class="upload-toggle-btn header-upload-btn" id="upload-toggle-btn">
+                📁 Upload Excel File
+            </button>
+        </div>
+    </div>
+
+    <!-- Container -->
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-item" id="brand-filter">
+                <div class="sidebar-icon">📋</div>
+                <div class="sidebar-label">Brand</div>
+                <div class="dropdown-menu" id="brand-dropdown">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            <div class="sidebar-item" id="status-filter">
+                <div class="sidebar-icon">⚡</div>
+                <div class="sidebar-label">Status</div>
+                <div class="dropdown-menu" id="status-dropdown">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            <div class="sidebar-item" id="search-filter">
+                <div class="sidebar-icon">🔍</div>
+                <div class="sidebar-label">Search</div>
+                <div class="dropdown-menu" id="search-dropdown" style="min-width: 300px;">
+                    <div style="padding: 1rem;">
+                        <input type="text" id="search-input" class="search-input" placeholder="Search DCR, Brand, or Name...">
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-item" id="month-filter">
+                <div class="sidebar-icon">📅</div>
+                <div class="sidebar-label">Launch Month</div>
+                <div class="dropdown-menu" id="month-dropdown">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Upload Section (Hidden by default) -->
+            <div class="upload-section" id="upload-section">
+                <div class="upload-area" id="upload-area">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
+                    <div style="font-size: 1.1rem; font-weight: 600; color: #4a69bd; margin-bottom: 0.5rem;">
+                        Drop Excel file here or click to upload
+                    </div>
+                    <div style="font-size: 0.9rem; color: #7f8c8d;">
+                        Supports .xlsx files
+                    </div>
+                    <input type="file" id="file-input" accept=".xlsx,.xls" style="display: none;">
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="kpi-section">
+                <div class="kpi-card designing">
+                    <div class="kpi-icon">📐</div>
+                    <div class="kpi-label">Designing</div>
+                    <div class="kpi-value" id="kpi-designing">0</div>
+                    <div class="kpi-subtitle">Artwork & Development</div>
+                </div>
+                <div class="kpi-card sampling">
+                    <div class="kpi-icon">🏆</div>
+                    <div class="kpi-label">Sampling</div>
+                    <div class="kpi-value" id="kpi-sampling">0</div>
+                    <div class="kpi-subtitle">Bottle & Box Sampling</div>
+                </div>
+                <div class="kpi-card approval">
+                    <div class="kpi-icon">👁</div>
+                    <div class="kpi-label">Approval</div>
+                    <div class="kpi-value" id="kpi-approval">0</div>
+                    <div class="kpi-subtitle">Ready for Production</div>
+                </div>
+                <div class="kpi-card approved">
+                    <div class="kpi-icon">✅</div>
+                    <div class="kpi-label">Approved</div>
+                    <div class="kpi-value" id="kpi-approved">0</div>
+                    <div class="kpi-subtitle">Ready for Production</div>
+                </div>
+            </div>
+
+            <!-- Fragrance Board -->
+            <div class="section-title" onclick="toggleSection('fragrance-board')">
+                <span>Fragrance Board</span>
+                <span class="section-toggle-icon" id="fragrance-board-icon">▼</span>
+            </div>
+            <div class="section-content" id="fragrance-board-content">
+                <div class="fragrance-board">
+                    <div class="board-column pending">
+                        <div class="board-header">
+                            <div class="board-title">
+                                <div class="board-icon">⚠</div>
+                                <div class="board-name">Pending</div>
+                            </div>
+                            <div class="board-count" id="pending-count">0</div>
+                        </div>
+                        <div class="board-subtitle">Fragrance not identified</div>
+                        <div class="board-cards" id="pending-cards">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    <div class="board-column direction-set">
+                        <div class="board-header">
+                            <div class="board-title">
+                                <div class="board-icon">◯</div>
+                                <div class="board-name">Direction Set</div>
+                            </div>
+                            <div class="board-count" id="direction-count">0</div>
+                        </div>
+                        <div class="board-subtitle">Benchmark / olfactive direction locked</div>
+                        <div class="board-cards" id="direction-cards">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    <div class="board-column finalized">
+                        <div class="board-header">
+                            <div class="board-title">
+                                <div class="board-icon">☑</div>
+                                <div class="board-name">Finalized</div>
+                            </div>
+                            <div class="board-count" id="finalized-count">0</div>
+                        </div>
+                        <div class="board-subtitle">Fragrance approved</div>
+                        <div class="board-cards" id="finalized-cards">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ETA Tracker -->
+            <div class="section-title" onclick="toggleSection('eta-tracker')">
+                <span>ETA Tracker</span>
+                <span class="section-toggle-icon" id="eta-tracker-icon">▼</span>
+            </div>
+            <div class="section-content" id="eta-tracker-content">
+                <div class="eta-tracker">
+                    <div class="risk-tabs">
+                        <div class="risk-tab all active" id="risk-tab-all">
+                            <span>📊</span>
+                            <span>All - <span id="all-risk-count">0</span></span>
+                        </div>
+                        <div class="risk-tab high" id="risk-tab-high">
+                            <span>⚠</span>
+                            <span>High Risk - <span id="high-risk-count">0</span></span>
+                        </div>
+                        <div class="risk-tab medium" id="risk-tab-medium">
+                            <span>⏳</span>
+                            <span>Medium Risk - <span id="medium-risk-count">0</span></span>
+                        </div>
+                        <div class="risk-tab low" id="risk-tab-low">
+                            <span>✅</span>
+                            <span>On Track - <span id="low-risk-count">0</span></span>
+                        </div>
+                    </div>
+
+                    <!-- View Toggle (Mobile Only) -->
+                    <div class="view-toggle">
+                        <button class="view-toggle-btn active" id="view-toggle-table" onclick="switchETAView('table')">
+                            📊 Table
+                        </button>
+                        <button class="view-toggle-btn" id="view-toggle-cards" onclick="switchETAView('cards')">
+                            📇 Cards
+                        </button>
+                    </div>
+
+                    <!-- Table View -->
+                    <div class="eta-table-container" id="eta-table-view">
+                        <table class="eta-table">
+                            <thead>
+                                <tr>
+                                    <th>DCR</th>
+                                    <th>BRAND</th>
+                                    <th>NAME</th>
+                                    <th>LAUNCH DATE</th>
+                                    <th>RISK LEVEL</th>
+                                    <th>BOTTLE</th>
+                                    <th>BOX</th>
+                                    <th>OIL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="eta-table-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Card View (Mobile) -->
+                    <div class="eta-cards" id="eta-cards-view">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="section-title" onclick="toggleSection('timeline')">
+                <span>Launches Timeline</span>
+                <span class="section-toggle-icon" id="timeline-icon">▼</span>
+            </div>
+            <div class="section-content" id="timeline-content">
+                <div class="timeline-section">
+                    <div class="timeline-filters">
+                        <div class="timeline-filter">
+                            <input type="radio" name="timeline" id="timeline-all" value="all" checked>
+                            <label for="timeline-all">All</label>
+                        </div>
+                        <div class="timeline-filter">
+                            <input type="radio" name="timeline" id="timeline-month" value="month">
+                            <label for="timeline-month">This Month</label>
+                        </div>
+                        <div class="timeline-filter">
+                            <input type="radio" name="timeline" id="timeline-30" value="30">
+                            <label for="timeline-30">Next 30 Days</label>
+                        </div>
+                        <div class="timeline-filter">
+                            <input type="radio" name="timeline" id="timeline-risk" value="risk">
+                            <label for="timeline-risk">High Risk Only</label>
+                        </div>
+                    </div>
+                    <div class="timeline-months" id="timeline-months">
+                        <!-- Month headers populated dynamically -->
+                    </div>
+                    <div class="timeline-chart" id="timeline-chart">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reset Button -->
+            <button class="reset-button" id="reset-button" style="display: none;" title="Reset Dashboard">
+                🔄
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="mobile-nav">
+        <div class="mobile-nav-item" onclick="openMobileFilter('brand')">
+            <div class="mobile-nav-icon">📋</div>
+            <div class="mobile-nav-label">Brand</div>
+        </div>
+        <div class="mobile-nav-item" onclick="openMobileFilter('status')">
+            <div class="mobile-nav-icon">⚡</div>
+            <div class="mobile-nav-label">Status</div>
+        </div>
+        <div class="mobile-nav-item" onclick="openMobileFilter('search')">
+            <div class="mobile-nav-icon">🔍</div>
+            <div class="mobile-nav-label">Search</div>
+        </div>
+        <div class="mobile-nav-item" onclick="openMobileFilter('month')">
+            <div class="mobile-nav-icon">📅</div>
+            <div class="mobile-nav-label">Month</div>
+        </div>
+    </div>
+
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobile-overlay"></div>
+
+    <!-- Mobile Dropdown -->
+    <div class="mobile-dropdown" id="mobile-dropdown">
+        <div class="mobile-dropdown-header">
+            <div class="mobile-dropdown-title" id="mobile-dropdown-title">Filter</div>
+            <div class="mobile-dropdown-close" id="mobile-dropdown-close">×</div>
+        </div>
+        <div id="mobile-dropdown-content">
+            <!-- Populated dynamically -->
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+        let filteredData = [];
+        let originalData = []; // Store original loaded data for reset
+        let activeRiskFilter = 'all';
+        let filters = {
+            brand: [],
+            status: [],
+            month: [],
+            search: ''
+        };
+
+        // Section toggle function
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId + '-content');
+            const icon = document.getElementById(sectionId + '-icon');
+            
+            content.classList.toggle('collapsed');
+            icon.classList.toggle('collapsed');
+        }
+
+        // Auto-load on page load
+        window.addEventListener('load', function() {
+            autoLoadExcel();
+        });
+
+        // Auto-load Excel from same directory
+        async function autoLoadExcel() {
+            try {
+                const response = await fetch('NPD_REPORT.xlsx');
+                if (response.ok) {
+                    const arrayBuffer = await response.arrayBuffer();
+                    processExcelFile(arrayBuffer);
+                }
+            } catch (error) {
+                console.log('No auto-load file found');
+            }
+        }
+
+        // Upload toggle button
+        const uploadToggleBtn = document.getElementById('upload-toggle-btn');
+        const uploadSection = document.getElementById('upload-section');
+
+        uploadToggleBtn.addEventListener('click', () => {
+            uploadSection.classList.toggle('visible');
+            if (uploadSection.classList.contains('visible')) {
+                uploadToggleBtn.innerHTML = '✖ Close Upload Section';
+            } else {
+                uploadToggleBtn.innerHTML = '📁 Upload Excel File';
+            }
+        });
+
+        // Upload area
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) handleFile(file);
+        });
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                processExcelFile(data);
+                
+                // Auto-hide upload section after successful upload
+                uploadSection.classList.remove('visible');
+                uploadToggleBtn.innerHTML = '📁 Upload Excel File';
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processExcelFile(data) {
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+            allData = jsonData.map(row => ({
+                id: row['DCR'] || row['Project ID'] || '',
+                brand: row['Brand'] || '',
+                finalName: row['Final Name'] || '',
+                fragranceStatus: row['Fragrance Status'] || 'Pending',
+                overallStatus: row['Overall Status'] || '',
+                bottleStatus: row['Bottle Status'] || 'Not Ordered',
+                bottleETA: row['Bottle ETA'] ? parseDate(row['Bottle ETA']) : null,
+                boxStatus: row['Box Status'] || 'Not Ordered',
+                boxETA: row['Box ETA'] ? parseDate(row['Box ETA']) : null,
+                oilStatus: row['Oil Status'] || 'Not Ordered',
+                oilETA: row['Oil ETA'] ? parseDate(row['Oil ETA']) : null,
+                launchDate: row['Launch Date'] ? parseDate(row['Launch Date']) : null
+            }));
+
+            originalData = [...allData]; // Store original for reset
+            filteredData = [...allData];
+            populateFilters();
+            updateDashboard();
+            
+            // Show reset button after data loads
+            document.getElementById('reset-button').style.display = 'flex';
+        }
+
+        function parseDate(value) {
+            if (typeof value === 'number') {
+                // Excel date serial number
+                const date = new Date((value - 25569) * 86400 * 1000);
+                return date;
+            } else if (typeof value === 'string') {
+                return new Date(value);
+            }
+            return null;
+        }
+
+        function formatDate(date) {
+            if (!date || !(date instanceof Date) || isNaN(date)) return '';
+            const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+            return `${months[date.getMonth()]} ${date.getDate()}`;
+        }
+
+        function calculateRisk(project) {
+            const today = new Date();
+            const launch = project.launchDate;
+            
+            if (!launch) return { level: 'medium', label: 'WATCH' };
+            
+            const daysToLaunch = Math.floor((launch - today) / (1000 * 60 * 60 * 24));
+            
+            // Check material readiness
+            const bottleReady = project.bottleStatus === 'Received' || project.bottleStatus === 'Ordered';
+            const boxReady = project.boxStatus === 'Received' || project.boxStatus === 'Ordered';
+            const oilReady = project.oilStatus === 'Received' || project.oilStatus === 'Ordered';
+            
+            const allReceived = project.bottleStatus === 'Received' && 
+                               project.boxStatus === 'Received' && 
+                               project.oilStatus === 'Received';
+            
+            const allReady = bottleReady && boxReady && oilReady;
+            
+            // RULE 1: ON TRACK OVERRIDE
+            if (allReceived) {
+                return { level: 'low', label: 'ON TRACK' };
+            }
+            
+            // RULE 2: HIGH RISK
+            if (daysToLaunch <= 30 && !allReady) {
+                return { level: 'high', label: 'AT RISK' };
+            }
+            
+            // RULE 3: MEDIUM RISK
+            if (daysToLaunch > 30 && daysToLaunch <= 60 && !allReady) {
+                return { level: 'medium', label: 'WATCH' };
+            }
+            
+            // RULE 4: ON TRACK
+            if (daysToLaunch > 60 && daysToLaunch <= 90 && allReady) {
+                return { level: 'low', label: 'ON TRACK' };
+            }
+            
+            return { level: 'medium', label: 'WATCH' };
+        }
+
+        function populateFilters() {
+            // Brands
+            const brands = [...new Set(allData.map(d => d.brand))].filter(Boolean).sort();
+            const brandDropdown = document.getElementById('brand-dropdown');
+            brandDropdown.innerHTML = `
+                <div class="dropdown-item">
+                    <input type="checkbox" id="brand-all" value="all" onchange="toggleAllFilters('brand')">
+                    <label for="brand-all"><strong>All</strong></label>
+                </div>
+                ${brands.map(brand => `
+                    <div class="dropdown-item">
+                        <input type="checkbox" id="brand-${brand}" value="${brand}" onchange="updateFilters('brand', '${brand}')">
+                        <label for="brand-${brand}">${brand}</label>
+                    </div>
+                `).join('')}
+            `;
+
+            // Statuses
+            const statuses = [...new Set(allData.map(d => d.overallStatus))].filter(Boolean).sort();
+            const statusDropdown = document.getElementById('status-dropdown');
+            statusDropdown.innerHTML = `
+                <div class="dropdown-item">
+                    <input type="checkbox" id="status-all" value="all" onchange="toggleAllFilters('status')">
+                    <label for="status-all"><strong>All</strong></label>
+                </div>
+                ${statuses.map(status => `
+                    <div class="dropdown-item">
+                        <input type="checkbox" id="status-${status}" value="${status}" onchange="updateFilters('status', '${status}')">
+                        <label for="status-${status}">${status}</label>
+                    </div>
+                `).join('')}
+            `;
+
+            // Months
+            const months = [...new Set(allData.map(d => {
+                if (d.launchDate) {
+                    return d.launchDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+                }
+                return null;
+            }))].filter(Boolean).sort();
+            const monthDropdown = document.getElementById('month-dropdown');
+            monthDropdown.innerHTML = `
+                <div class="dropdown-item">
+                    <input type="checkbox" id="month-all" value="all" onchange="toggleAllFilters('month')">
+                    <label for="month-all"><strong>All</strong></label>
+                </div>
+                ${months.map(month => `
+                    <div class="dropdown-item">
+                        <input type="checkbox" id="month-${month}" value="${month}" onchange="updateFilters('month', '${month}')">
+                        <label for="month-${month}">${month}</label>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        function toggleAllFilters(type) {
+            filters[type] = [];
+            applyFilters();
+        }
+
+        function updateFilters(type, value) {
+            const index = filters[type].indexOf(value);
+            if (index > -1) {
+                filters[type].splice(index, 1);
+            } else {
+                filters[type].push(value);
+            }
+            applyFilters();
+        }
+
+        // Search
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            filters.search = e.target.value.toLowerCase();
+            applyFilters();
+        });
+
+        function applyFilters() {
+            filteredData = allData.filter(item => {
+                // Brand filter
+                if (filters.brand.length > 0 && !filters.brand.includes(item.brand)) return false;
+                
+                // Status filter
+                if (filters.status.length > 0 && !filters.status.includes(item.overallStatus)) return false;
+                
+                // Month filter
+                if (filters.month.length > 0) {
+                    if (!item.launchDate) return false;
+                    const itemMonth = item.launchDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+                    if (!filters.month.includes(itemMonth)) return false;
+                }
+                
+                // Search filter
+                if (filters.search) {
+                    const searchStr = filters.search;
+                    return item.id.toLowerCase().includes(searchStr) ||
+                           item.brand.toLowerCase().includes(searchStr) ||
+                           item.finalName.toLowerCase().includes(searchStr);
+                }
+                
+                return true;
+            });
+            
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            updateKPIs();
+            updateFragranceBoard();
+            updateETATracker();
+            updateTimeline();
+        }
+
+        function updateKPIs() {
+            const designing = filteredData.filter(d => d.overallStatus === 'Designing').length;
+            const sampling = filteredData.filter(d => d.overallStatus === 'Sampling').length;
+            const approval = filteredData.filter(d => d.overallStatus === 'Approval').length;
+            const approved = filteredData.filter(d => d.overallStatus === 'Approved').length;
+
+            document.getElementById('kpi-designing').textContent = designing;
+            document.getElementById('kpi-sampling').textContent = sampling;
+            document.getElementById('kpi-approval').textContent = approval;
+            document.getElementById('kpi-approved').textContent = approved;
+        }
+
+        function updateFragranceBoard() {
+            const pending = filteredData.filter(d => d.fragranceStatus === 'Pending');
+            const directionSet = filteredData.filter(d => d.fragranceStatus === 'Direction Set');
+            const finalized = filteredData.filter(d => d.fragranceStatus === 'Finalized');
+
+            document.getElementById('pending-count').textContent = pending.length;
+            document.getElementById('direction-count').textContent = directionSet.length;
+            document.getElementById('finalized-count').textContent = finalized.length;
+
+            document.getElementById('pending-cards').innerHTML = pending.map(item => `
+                <div class="board-card">
+                    <div class="board-card-dcr">📋 ${item.id}</div>
+                    <div class="board-card-name">${item.finalName}</div>
+                    <div class="board-card-brand">${item.brand}</div>
+                </div>
+            `).join('');
+
+            document.getElementById('direction-cards').innerHTML = directionSet.map(item => `
+                <div class="board-card">
+                    <div class="board-card-dcr">◯ ${item.id}</div>
+                    <div class="board-card-name">${item.finalName}</div>
+                    <div class="board-card-brand">${item.brand}</div>
+                </div>
+            `).join('');
+
+            document.getElementById('finalized-cards').innerHTML = finalized.map(item => `
+                <div class="board-card">
+                    <div class="board-card-dcr">✅ ${item.id}</div>
+                    <div class="board-card-name">${item.finalName}</div>
+                    <div class="board-card-brand">${item.brand}</div>
+                </div>
+            `).join('');
+        }
+
+        function updateETATracker() {
+            const dataWithRisk = filteredData.map(item => ({
+                ...item,
+                risk: calculateRisk(item)
+            }));
+
+            const highRisk = dataWithRisk.filter(d => d.risk.level === 'high');
+            const mediumRisk = dataWithRisk.filter(d => d.risk.level === 'medium');
+            const lowRisk = dataWithRisk.filter(d => d.risk.level === 'low');
+
+            document.getElementById('all-risk-count').textContent = dataWithRisk.length;
+            document.getElementById('high-risk-count').textContent = highRisk.length;
+            document.getElementById('medium-risk-count').textContent = mediumRisk.length;
+            document.getElementById('low-risk-count').textContent = lowRisk.length;
+
+            let displayData = dataWithRisk;
+            if (activeRiskFilter === 'high') displayData = highRisk;
+            else if (activeRiskFilter === 'medium') displayData = mediumRisk;
+            else if (activeRiskFilter === 'low') displayData = lowRisk;
+            // 'all' shows everything
+
+            // Update table view
+            const tableBody = document.getElementById('eta-table-body');
+            tableBody.innerHTML = displayData.map(item => `
+                <tr>
+                    <td>${item.id}</td>
+                    <td>${item.brand}</td>
+                    <td>${item.finalName}</td>
+                    <td>${formatDate(item.launchDate)}</td>
+                    <td><span class="risk-badge ${item.risk.level}">${item.risk.label}</span></td>
+                    <td>${getMaterialStatusHTML(item.bottleStatus, item.bottleETA)}</td>
+                    <td>${getMaterialStatusHTML(item.boxStatus, item.boxETA)}</td>
+                    <td>${getMaterialStatusHTML(item.oilStatus, item.oilETA)}</td>
+                </tr>
+            `).join('');
+
+            // Update card view (mobile)
+            const cardsContainer = document.getElementById('eta-cards-view');
+            cardsContainer.innerHTML = displayData.map(item => `
+                <div class="eta-card ${item.risk.level}">
+                    <div class="eta-card-header">
+                        <div>
+                            <div class="eta-card-title">${item.finalName}</div>
+                            <div class="eta-card-dcr">${item.id}</div>
+                        </div>
+                        <span class="risk-badge ${item.risk.level}">${item.risk.label}</span>
+                    </div>
+                    <div class="eta-card-info">
+                        <div class="eta-card-field">
+                            <div class="eta-card-label">Brand</div>
+                            <div class="eta-card-value">${item.brand}</div>
+                        </div>
+                        <div class="eta-card-field">
+                            <div class="eta-card-label">Launch Date</div>
+                            <div class="eta-card-value">${formatDate(item.launchDate)}</div>
+                        </div>
+                    </div>
+                    <div class="eta-card-materials">
+                        ${getMaterialStatusHTML(item.bottleStatus, item.bottleETA)}
+                        ${getMaterialStatusHTML(item.boxStatus, item.boxETA)}
+                        ${getMaterialStatusHTML(item.oilStatus, item.oilETA)}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getMaterialStatusHTML(status, eta) {
+            if (status === 'Received') {
+                return '<span class="material-status received">✅ Received</span>';
+            } else if (status === 'Ordered') {
+                return `<span class="material-status ordered">🟡 ${formatDate(eta)}</span>`;
+            } else {
+                return '<span class="material-status not-ordered">❌ Not Ordered</span>';
+            }
+        }
+
+        // Risk tab switching
+        document.getElementById('risk-tab-all').addEventListener('click', () => {
+            activeRiskFilter = 'all';
+            updateRiskTabs();
+            updateETATracker();
+        });
+
+        document.getElementById('risk-tab-high').addEventListener('click', () => {
+            activeRiskFilter = 'high';
+            updateRiskTabs();
+            updateETATracker();
+        });
+
+        document.getElementById('risk-tab-medium').addEventListener('click', () => {
+            activeRiskFilter = 'medium';
+            updateRiskTabs();
+            updateETATracker();
+        });
+
+        document.getElementById('risk-tab-low').addEventListener('click', () => {
+            activeRiskFilter = 'low';
+            updateRiskTabs();
+            updateETATracker();
+        });
+
+        function updateRiskTabs() {
+            document.querySelectorAll('.risk-tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(`risk-tab-${activeRiskFilter}`).classList.add('active');
+        }
+
+        // Reset button
+        document.getElementById('reset-button').addEventListener('click', () => {
+            // Reset all filters
+            filters = {
+                brand: [],
+                status: [],
+                month: [],
+                search: ''
+            };
+            
+            // Reset data to original
+            allData = [...originalData];
+            filteredData = [...originalData];
+            
+            // Reset search input
+            document.getElementById('search-input').value = '';
+            
+            // Reset risk filter
+            activeRiskFilter = 'all';
+            
+            // Repopulate filters
+            populateFilters();
+            
+            // Update dashboard
+            updateDashboard();
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        function updateTimeline() {
+            const timelineFilter = document.querySelector('input[name="timeline"]:checked').value;
+            const today = new Date();
+            
+            let timelineData = filteredData.map(item => ({
+                ...item,
+                risk: calculateRisk(item)
+            }));
+
+            // Apply timeline filter
+            if (timelineFilter === 'month') {
+                const currentMonth = today.getMonth();
+                const currentYear = today.getFullYear();
+                timelineData = timelineData.filter(item => {
+                    if (!item.launchDate) return false;
+                    return item.launchDate.getMonth() === currentMonth && 
+                           item.launchDate.getFullYear() === currentYear;
+                });
+            } else if (timelineFilter === '30') {
+                const thirtyDaysLater = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+                timelineData = timelineData.filter(item => {
+                    if (!item.launchDate) return false;
+                    return item.launchDate >= today && item.launchDate <= thirtyDaysLater;
+                });
+            } else if (timelineFilter === 'risk') {
+                timelineData = timelineData.filter(item => item.risk.level === 'high');
+            }
+
+            // Sort by launch date
+            timelineData.sort((a, b) => {
+                if (!a.launchDate) return 1;
+                if (!b.launchDate) return -1;
+                return a.launchDate - b.launchDate;
+            });
+
+            // Find date range
+            const dates = timelineData.map(d => d.launchDate).filter(Boolean);
+            if (dates.length === 0) {
+                document.getElementById('timeline-months').innerHTML = '';
+                document.getElementById('timeline-chart').innerHTML = '<div class="no-data">No data available</div>';
+                return;
+            }
+
+            const minDate = new Date(Math.min(...dates));
+            const maxDate = new Date(Math.max(...dates));
+            const dateRange = maxDate - minDate;
+
+            // Generate month headers
+            const monthHeaders = [];
+            const currentDate = new Date(minDate);
+            currentDate.setDate(1); // Start of month
+            
+            while (currentDate <= maxDate) {
+                monthHeaders.push(currentDate.toLocaleString('default', { month: 'short' }));
+                currentDate.setMonth(currentDate.getMonth() + 1);
+            }
+
+            document.getElementById('timeline-months').innerHTML = monthHeaders.map(month => 
+                `<div class="timeline-month-label">${month}</div>`
+            ).join('');
+
+            const chartHTML = timelineData.map(item => {
+                if (!item.launchDate) return '';
+                const position = dateRange > 0 ? ((item.launchDate - minDate) / dateRange) * 100 : 0;
+                return `
+                    <div class="timeline-row">
+                        <div class="timeline-bar-container">
+                            <div class="timeline-bar ${item.risk.level}" 
+                                 style="left: ${position}%; width: 120px;"
+                                 title="${item.finalName} - ${formatDate(item.launchDate)}">
+                                ${item.finalName}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('timeline-chart').innerHTML = chartHTML || '<div class="no-data">No data available</div>';
+        }
+
+        // Timeline filter listeners
+        document.querySelectorAll('input[name="timeline"]').forEach(radio => {
+            radio.addEventListener('change', updateTimeline);
+        });
+
+        // Mobile filter functions
+        function openMobileFilter(filterType) {
+            const overlay = document.getElementById('mobile-overlay');
+            const dropdown = document.getElementById('mobile-dropdown');
+            const title = document.getElementById('mobile-dropdown-title');
+            const content = document.getElementById('mobile-dropdown-content');
+
+            // Set title based on filter type
+            const titles = {
+                'brand': 'Filter by Brand',
+                'status': 'Filter by Status',
+                'search': 'Search Projects',
+                'month': 'Filter by Launch Month'
+            };
+            title.textContent = titles[filterType] || 'Filter';
+
+            // Get content from sidebar dropdown
+            let dropdownContent = '';
+            if (filterType === 'search') {
+                dropdownContent = '<div style="padding: 0.5rem;"><input type="text" id="mobile-search-input" class="search-input" placeholder="Search DCR, Brand, or Name..." /></div>';
+            } else {
+                const sourceDropdown = document.getElementById(`${filterType}-dropdown`);
+                dropdownContent = sourceDropdown.innerHTML;
+            }
+            content.innerHTML = dropdownContent;
+
+            // Show overlay and dropdown
+            overlay.classList.add('active');
+            dropdown.classList.add('active');
+
+            // If search, add event listener
+            if (filterType === 'search') {
+                const mobileSearchInput = document.getElementById('mobile-search-input');
+                mobileSearchInput.addEventListener('input', (e) => {
+                    filters.search = e.target.value.toLowerCase();
+                    applyFilters();
+                });
+                mobileSearchInput.focus();
+            }
+        }
+
+        function closeMobileFilter() {
+            const overlay = document.getElementById('mobile-overlay');
+            const dropdown = document.getElementById('mobile-dropdown');
+            
+            overlay.classList.remove('active');
+            dropdown.classList.remove('active');
+        }
+
+        // ETA View Switcher (Mobile)
+        function switchETAView(view) {
+            const tableView = document.getElementById('eta-table-view');
+            const cardsView = document.getElementById('eta-cards-view');
+            const tableBtn = document.getElementById('view-toggle-table');
+            const cardsBtn = document.getElementById('view-toggle-cards');
+
+            if (view === 'table') {
+                tableView.classList.remove('hidden');
+                cardsView.classList.remove('active');
+                tableBtn.classList.add('active');
+                cardsBtn.classList.remove('active');
+            } else {
+                tableView.classList.add('hidden');
+                cardsView.classList.add('active');
+                tableBtn.classList.remove('active');
+                cardsBtn.classList.add('active');
+            }
+        }
+
+        // Mobile dropdown close handlers
+        document.getElementById('mobile-dropdown-close').addEventListener('click', closeMobileFilter);
+        document.getElementById('mobile-overlay').addEventListener('click', closeMobileFilter);
+
+        // Prevent dropdown close when clicking inside
+        document.getElementById('mobile-dropdown').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    </script>
+</body>
+</html>
