@@ -1721,6 +1721,23 @@
     </div>
 
     <script>
+        // ============================================
+        // CONFIGURATION - UPDATE THIS SECTION
+        // ============================================
+        // To load Excel from SharePoint automatically:
+        // 1. Get your Excel file's direct download URL from SharePoint
+        // 2. Replace the URL below with your SharePoint Excel URL
+        // 3. Example: 'https://yourcompany.sharepoint.com/sites/sitename/_layouts/15/download.aspx?SourceUrl=/sites/sitename/Shared%20Documents/NPD_REPORT.xlsx'
+        
+        const SHAREPOINT_CONFIG = {
+            // Option 1: Full SharePoint download URL
+            excelUrl: 'NPD_REPORT.xlsx', // Replace with your SharePoint URL
+            
+            // Option 2: If dashboard is hosted in same SharePoint site, use relative path
+            // excelUrl: '/sites/brevtest/Shared Documents/NPD/NPD_REPORT.xlsx',
+        };
+        // ============================================
+        
         let allData = [];
         let filteredData = [];
         let originalData = []; // Store original loaded data for reset
@@ -1746,16 +1763,28 @@
             autoLoadExcel();
         });
 
-        // Auto-load Excel from same directory
+        // Auto-load Excel from SharePoint or same directory
         async function autoLoadExcel() {
             try {
-                const response = await fetch('NPD_REPORT.xlsx');
+                const excelUrl = SHAREPOINT_CONFIG.excelUrl;
+                
+                const response = await fetch(excelUrl, {
+                    method: 'GET',
+                    credentials: 'include', // Important: Include credentials for SharePoint auth
+                    headers: {
+                        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    }
+                });
+                
                 if (response.ok) {
                     const arrayBuffer = await response.arrayBuffer();
                     processExcelFile(arrayBuffer);
+                    console.log('✅ Excel loaded successfully');
+                } else {
+                    console.log('ℹ️ Could not auto-load Excel. Please upload manually.');
                 }
             } catch (error) {
-                console.log('No auto-load file found');
+                console.log('ℹ️ Auto-load not configured or file not accessible. Please use Upload button.');
             }
         }
 
@@ -2126,10 +2155,15 @@
 
         function getMaterialStatusHTML(status, eta) {
             if (status === 'Received') {
-                return '<span class="material-status received">✅ Received</span>';
-            } else if (status === 'Ordered') {
-                return `<span class="material-status ordered">🟡 ${formatDate(eta)}</span>`;
+                return '<span class="material-status received">Received</span>';
+            } else if (status === 'Ordered' && eta) {
+                // Show the ETA date when ordered
+                return `<span class="material-status ordered">${formatDate(eta)}</span>`;
+            } else if (status === 'Ordered' && !eta) {
+                // If ordered but no ETA provided, show "Ordered"
+                return '<span class="material-status ordered">Ordered</span>';
             } else {
+                // Not Ordered
                 return '<span class="material-status not-ordered">❌ Not Ordered</span>';
             }
         }
