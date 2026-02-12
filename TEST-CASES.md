@@ -859,4 +859,14 @@ _________________________________
 
 END OF TEST CASES DOCUMENT
 
-thee is something good
+
+
+
+
+
+Let's not waste time on hosting the HTML file on SharePoint of embeding it to SharePoint site. the best result will alwys be the html page preview which is not what we want. even using powershell still doesn't fix the problem. I can conclude that Microsoft has restricted these action in SharePoint.  let's find a new solution to the problem.                                   
+
+
+The NPD dashboard can be hosted on a third party server (I have hosted it temp on vercel for the purpose of this discussion).  How do i restrict the dashboard to only team members in the company to view this dashboard. Also the excel sheet data should never be accessed  by members out of the company.  what do you suggest?  Also i how do I embed the excel sheet that is saved on sharepoint to the html code such that it fetches the excel data on page load without having to upload the excel sheet to the dashboard? each time since the dashboard is hosted outside SharePoint
+
+Note: Don't edit the dashboard yet until we have finalized a solution.
