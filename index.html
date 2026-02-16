@@ -1946,18 +1946,31 @@
 
             allData = jsonData.map(row => {
                 // Determine material statuses based on user's Excel structure
-                // If Received Date exists → "Received"
-                // Else if Order Status = "Ordered" → "Ordered" 
-                // Else → "Not Ordered"
+                // Priority logic:
+                // 1. If "Order Status" = "Received" OR "Received Date" exists → "Received"
+                // 2. Else if "Order Status" = "Ordered" → "Ordered" 
+                // 3. Else → "Not Ordered"
                 
-                const bottleStatus = row['Bottle Received Date'] ? 'Received' : 
-                                   (row['Bottle Order Status'] && row['Bottle Order Status'].toString().trim() === 'Ordered' ? 'Ordered' : 'Not Ordered');
+                const getStatus = (orderStatus, receivedDate) => {
+                    const status = orderStatus ? orderStatus.toString().trim() : '';
+                    
+                    // Check if marked as Received in Order Status OR has Received Date
+                    if (status === 'Received' || receivedDate) {
+                        return 'Received';
+                    }
+                    // Check if marked as Ordered
+                    else if (status === 'Ordered') {
+                        return 'Ordered';
+                    }
+                    // Default to Not Ordered
+                    else {
+                        return 'Not Ordered';
+                    }
+                };
                 
-                const boxStatus = row['Box Received Date'] ? 'Received' :
-                                (row['Box Order Status'] && row['Box Order Status'].toString().trim() === 'Ordered' ? 'Ordered' : 'Not Ordered');
-                
-                const oilStatus = row['Oil Received Date'] ? 'Received' :
-                                (row['Oil Order Status'] && row['Oil Order Status'].toString().trim() === 'Ordered' ? 'Ordered' : 'Not Ordered');
+                const bottleStatus = getStatus(row['Bottle Order Status'], row['Bottle Received Date']);
+                const boxStatus = getStatus(row['Box Order Status'], row['Box Received Date']);
+                const oilStatus = getStatus(row['Oil Order Status'], row['Oil Received Date']);
                 
                 return {
                     id: row['Project ID'] || row['DCR'] || '',
