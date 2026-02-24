@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Image to Base64 Converter - NPD Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        .upload-zone {
+            border: 3px dashed #bdc3c7;
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s;
+            cursor: pointer;
+            margin-bottom: 2rem;
+        }
+
+        .upload-zone:hover {
+            border-color: #667eea;
+            background: #f0f1ff;
+        }
+
+        .upload-zone.dragover {
+            border-color: #667eea;
+            background: #e8eaff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-text {
+            color: #2c3e50;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-hint {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .options {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .option-group {
+            flex: 1;
+        }
+
+        .option-label {
+            display: block;
+            color: #2c3e50;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .option-hint {
+            color: #7f8c8d;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 0.5rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        .quality-value {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .results {
+            margin-top: 2rem;
+        }
+
+        .result-item {
+            background: white;
+            border: 2px solid #ecf0f1;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+        }
+
+        .result-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .result-filename {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .result-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #7f8c8d;
+        }
+
+        .result-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .result-preview {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .preview-img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #ecf0f1;
+        }
+
+        .result-info {
+            flex: 1;
+        }
+
+        .result-dcr {
+            background: #667eea;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .result-dcr.manual {
+            background: #e67e22;
+        }
+
+        .result-base64-preview {
+            background: #f8f9fa;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #7f8c8d;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-bottom: 0.75rem;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        button.secondary {
+            background: #95a5a6;
+        }
+
+        button.secondary:hover {
+            background: #7f8c8d;
+        }
+
+        button.success {
+            background: #27ae60;
+        }
+
+        button.success:hover {
+            background: #229954;
+        }
+
+        .export-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .export-title {
+            color: #2c3e50;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #7f8c8d;
+        }
+
+        .loading-spinner {
+            font-size: 3rem;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffc107;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 Batch Image to Base64 Converter</h1>
+        <p class="subtitle">Convert multiple images for NPD Dashboard - No server upload required!</p>
+
+        <div class="upload-zone" id="upload-zone">
+            <div class="upload-icon">🖼️</div>
+            <div class="upload-text">Click to select images or drag & drop here</div>
+            <div class="upload-hint">Supports: JPG, PNG, GIF, WEBP, BMP • Multiple files allowed</div>
+            <input type="file" id="file-input" accept="image/*" multiple>
+        </div>
+
+        <div class="options">
+            <div class="option-group">
+                <label class="option-label">
+                    <input type="checkbox" id="optimize-checkbox" checked>
+                    Optimize images
+                </label>
+                <div class="option-hint">Reduces file size by resizing and compressing</div>
+            </div>
+
+            <div class="option-group">
+                <label class="option-label">Quality: <span class="quality-value" id="quality-value">85</span>%</label>
+                <input type="range" id="quality-slider" min="60" max="100" value="85">
+                <div class="option-hint">Higher = better quality, larger size</div>
+            </div>
+
+            <div class="option-group">
+                <label class="option-label">
+                    <input type="checkbox" id="dcr-extract-checkbox" checked>
+                    Auto-extract DCR from filename
+                </label>
+                <div class="option-hint">Looks for patterns like "DCR-2025-2026"</div>
+            </div>
+        </div>
+
+        <div id="stats-section" class="hidden">
+            <div class="stats-summary">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-images">0</div>
+                    <div class="stat-label">Images Converted</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-size">0 KB</div>
+                    <div class="stat-label">Total Base64 Size</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="average-size">0 KB</div>
+                    <div class="stat-label">Average Size</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading hidden">
+            <div class="loading-spinner">⏳</div>
+            <p>Converting images...</p>
+        </div>
+
+        <div id="results" class="results hidden">
+            <!-- Results will be inserted here -->
+        </div>
+
+        <div id="export-section" class="export-section hidden">
+            <div class="export-title">Export Results</div>
+            <div class="export-buttons">
+                <button onclick="downloadCSV()" class="success">📥 Download as CSV</button>
+                <button onclick="copyAllBase64()" class="success">📋 Copy All Base64 Strings</button>
+                <button onclick="resetTool()" class="secondary">🔄 Start Over</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let convertedImages = [];
+
+        const uploadZone = document.getElementById('upload-zone');
+        const fileInput = document.getElementById('file-input');
+        const optimizeCheckbox = document.getElementById('optimize-checkbox');
+        const qualitySlider = document.getElementById('quality-slider');
+        const qualityValue = document.getElementById('quality-value');
+        const dcrExtractCheckbox = document.getElementById('dcr-extract-checkbox');
+
+        // Update quality display
+        qualitySlider.addEventListener('input', () => {
+            qualityValue.textContent = qualitySlider.value;
+        });
+
+        // Upload zone click
+        uploadZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Drag and drop
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (files.length > 0) {
+                processImages(files);
+            }
+        });
+
+        // File input change
+        fileInput.addEventListener('change', () => {
+            const files = Array.from(fileInput.files);
+            if (files.length > 0) {
+                processImages(files);
+            }
+        });
+
+        function extractDCRFromFilename(filename) {
+            if (!dcrExtractCheckbox.checked) return null;
+
+            // Pattern 1: Full DCR-YYYY-NNNN
+            let match = filename.match(/DCR-\d{4}-\d{4}/i);
+            if (match) return match[0].toUpperCase();
+
+            // Pattern 2: Just YYYY-NNNN
+            match = filename.match(/\d{4}-\d{4}/);
+            if (match) return `DCR-${match[0]}`;
+
+            return null;
+        }
+
+        async function processImages(files) {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('export-section').classList.add('hidden');
+            document.getElementById('stats-section').classList.add('hidden');
+
+            convertedImages = [];
+
+            for (let file of files) {
+                const result = await convertImage(file);
+                if (result) {
+                    convertedImages.push(result);
+                }
+            }
+
+            displayResults();
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        async function convertImage(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                const img = new Image();
+
+                reader.onload = (e) => {
+                    img.src = e.target.result;
+
+                    img.onload = () => {
+                        let result = e.target.result;
+
+                        // Optimize if enabled
+                        if (optimizeCheckbox.checked) {
+                            result = optimizeImage(img, qualitySlider.value);
+                        }
+
+                        const dcr = extractDCRFromFilename(file.name);
+                        const originalSize = (file.size / 1024).toFixed(1);
+                        const base64Size = (result.length / 1024).toFixed(1);
+
+                        resolve({
+                            filename: file.name,
+                            dcr: dcr || 'MANUAL_ENTRY_NEEDED',
+                            base64: result,
+                            originalSize: originalSize,
+                            base64Size: base64Size,
+                            preview: result
+                        });
+                    };
+                };
+
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function optimizeImage(img, quality) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Resize if too large
+            let width = img.width;
+            let height = img.height;
+            const maxSize = 800;
+
+            if (width > maxSize || height > maxSize) {
+                if (width > height) {
+                    height = (height / width) * maxSize;
+                    width = maxSize;
+                } else {
+                    width = (width / height) * maxSize;
+                    height = maxSize;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+
+            return canvas.toDataURL('image/jpeg', quality / 100);
+        }
+
+        function displayResults() {
+            const resultsDiv = document.getElementById('results');
+            const statsSection = document.getElementById('stats-section');
+            const exportSection = document.getElementById('export-section');
+
+            resultsDiv.classList.remove('hidden');
+            statsSection.classList.remove('hidden');
+            exportSection.classList.remove('hidden');
+
+            // Update stats
+            const totalSize = convertedImages.reduce((sum, img) => sum + parseFloat(img.base64Size), 0);
+            const avgSize = totalSize / convertedImages.length;
+
+            document.getElementById('total-images').textContent = convertedImages.length;
+            document.getElementById('total-size').textContent = `${totalSize.toFixed(1)} KB`;
+            document.getElementById('average-size').textContent = `${avgSize.toFixed(1)} KB`;
+
+            // Display results
+            resultsDiv.innerHTML = convertedImages.map((img, index) => `
+                <div class="result-item">
+                    <div class="result-header">
+                        <div class="result-filename">${img.filename}</div>
+                        <div class="result-stats">
+                            <div class="result-stat">📁 Original: ${img.originalSize} KB</div>
+                            <div class="result-stat">💾 Base64: ${img.base64Size} KB</div>
+                        </div>
+                    </div>
+                    <div class="result-preview">
+                        <img src="${img.preview}" class="preview-img" alt="${img.filename}">
+                        <div class="result-info">
+                            <div class="result-dcr ${img.dcr === 'MANUAL_ENTRY_NEEDED' ? 'manual' : ''}">${img.dcr}</div>
+                            <div class="result-base64-preview">${img.base64.substring(0, 100)}...</div>
+                            <div class="result-actions">
+                                <button onclick="copyBase64(${index})">📋 Copy Base64</button>
+                                <button onclick="downloadBase64(${index})" class="secondary">💾 Download TXT</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function copyBase64(index) {
+            const base64 = convertedImages[index].base64;
+            navigator.clipboard.writeText(base64).then(() => {
+                alert('✓ Base64 string copied to clipboard!');
+            });
+        }
+
+        function downloadBase64(index) {
+            const img = convertedImages[index];
+            const blob = new Blob([img.base64], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${img.filename.split('.')[0]}_base64.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function copyAllBase64() {
+            const allBase64 = convertedImages.map(img => img.base64).join('\n');
+            navigator.clipboard.writeText(allBase64).then(() => {
+                alert(`✓ Copied ${convertedImages.length} base64 strings to clipboard!`);
+            });
+        }
+
+        function downloadCSV() {
+            const csv = [
+                ['Filename', 'DCR', 'Image URL', 'Original Size (KB)', 'Base64 Size (KB)'],
+                ...convertedImages.map(img => [
+                    img.filename,
+                    img.dcr,
+                    img.base64,
+                    img.originalSize,
+                    img.base64Size
+                ])
+            ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'npd_images_base64.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function resetTool() {
+            convertedImages = [];
+            fileInput.value = '';
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('export-section').classList.add('hidden');
+            document.getElementById('stats-section').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
