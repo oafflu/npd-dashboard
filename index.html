@@ -2560,32 +2560,9 @@
             });
         });
 
-        // Convert img button - Opens image converter
+        // Convert img button - Opens image converter in new tab
         document.getElementById('convert-img-btn').addEventListener('click', () => {
-            // Create a link to download the converter HTML file
-            const converterHTML = `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>NPD Image Converter</title></head>
-<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#667eea,#764ba2);font-family:sans-serif;margin:0;padding:2rem">
-<div style="background:white;padding:3rem;border-radius:16px;max-width:600px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
-<h1 style="color:#2c3e50;margin-bottom:1rem">📸 Image Converter</h1>
-<p style="color:#7f8c8d;margin-bottom:2rem">Please use the standalone <strong>Batch-Image-to-Base64-Converter.html</strong> file</p>
-<div style="background:#f0f7ff;padding:1.5rem;border-radius:8px;border-left:4px solid #667eea;text-align:left;margin-bottom:2rem">
-<strong style="color:#2c3e50">How to use:</strong>
-<ol style="margin:1rem 0 0 1.5rem;color:#34495e;line-height:1.8">
-<li>Locate the <code style="background:#e8eaff;padding:0.2rem 0.5rem;border-radius:4px;font-family:monospace;color:#667eea">Batch-Image-to-Base64-Converter.html</code> file</li>
-<li>Open it in your browser</li>
-<li>Drag & drop your product images</li>
-<li>Download CSV with base64 strings</li>
-<li>Copy to Excel and upload!</li>
-</ol>
-</div>
-<p style="color:#7f8c8d;font-size:0.9rem">This standalone file works better and has all features!</p>
-</div>
-</body></html>`;
-            
-            const newWindow = window.open('', '_blank');
-            newWindow.document.write(converterHTML);
-            newWindow.document.close();
+            window.open('Batch-Image-to-Base64-Converter.html', '_blank');
         });
 
         // Risk tab switching
