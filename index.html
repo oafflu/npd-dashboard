@@ -674,6 +674,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            display: block;
             pointer-events: none; /* Prevent right-click download */
             user-select: none;
             -webkit-user-select: none;
@@ -1601,12 +1602,15 @@
         }
 
         #modal-image {
-            max-width: 100%;
-            max-height: 70vh;
+            max-width: 90%;
+            max-height: 80vh;
+            width: auto;
+            height: auto;
             display: block;
             margin: 0 auto;
             border-radius: 8px;
-            pointer-events: none; /* Prevent right-click download */
+            object-fit: contain;
+            pointer-events: none;
             user-select: none;
             -webkit-user-select: none;
             -moz-user-select: none;
@@ -2166,7 +2170,7 @@
                                 brand: row['Brand'] || '',
                                 finalName: row['Final Name'] || '',
                                 fragranceStatus: row['Fragrance Status'] || 'Pending',
-                                overallStatus: row['Overall Status'] || '',
+                                overallStatus: (row['Overall Status'] || '').toString().trim(),
                                 bottleStatus: bottleStatus,
                                 bottleETA: row['Bottle ETA'] ? parseDate(row['Bottle ETA']) : null,
                                 boxStatus: boxStatus,
@@ -2377,10 +2381,21 @@
         }
 
         function updateKPIs() {
-            const designing = filteredData.filter(d => d.overallStatus === 'Designing').length;
-            const sampling = filteredData.filter(d => d.overallStatus === 'Sampling').length;
-            const approval = filteredData.filter(d => d.overallStatus === 'Approval').length;
-            const approved = filteredData.filter(d => d.overallStatus === 'Approved').length;
+            console.log('Updating KPIs with filteredData:', filteredData.length, 'items');
+            
+            // Sample first few items to check status values
+            console.log('Sample statuses:', filteredData.slice(0, 5).map(d => ({
+                id: d.id,
+                status: d.overallStatus,
+                statusLower: d.overallStatus ? d.overallStatus.toLowerCase() : 'null'
+            })));
+            
+            const designing = filteredData.filter(d => d.overallStatus && d.overallStatus.toLowerCase() === 'designing').length;
+            const sampling = filteredData.filter(d => d.overallStatus && d.overallStatus.toLowerCase() === 'sampling').length;
+            const approval = filteredData.filter(d => d.overallStatus && d.overallStatus.toLowerCase() === 'approval').length;
+            const approved = filteredData.filter(d => d.overallStatus && d.overallStatus.toLowerCase() === 'approved').length;
+
+            console.log('KPI Counts:', { designing, sampling, approval, approved });
 
             document.getElementById('kpi-designing').textContent = designing;
             document.getElementById('kpi-sampling').textContent = sampling;
@@ -2389,8 +2404,8 @@
         }
 
         function updateFragranceBoard() {
-            const pending = filteredData.filter(d => d.fragranceStatus === 'Pending');
-            const finalized = filteredData.filter(d => d.fragranceStatus === 'Finalized');
+            const pending = filteredData.filter(d => d.fragranceStatus && d.fragranceStatus.toLowerCase() === 'pending');
+            const finalized = filteredData.filter(d => d.fragranceStatus && d.fragranceStatus.toLowerCase() === 'finalized');
             const withImages = filteredData.filter(d => d.imageUrl && d.imageUrl.trim());
 
             document.getElementById('pending-count').textContent = pending.length;
