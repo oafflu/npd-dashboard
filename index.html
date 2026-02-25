@@ -2101,63 +2101,108 @@
         }
 
         function processExcelFile(data) {
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
-            allData = jsonData.map(row => {
-                // Determine material statuses based on user's Excel structure
-                // Priority logic:
-                // 1. If "Order Status" = "Received" OR "Received Date" exists → "Received"
-                // 2. Else if "Order Status" = "Ordered" → "Ordered" 
-                // 3. Else → "Not Ordered"
-                
-                const getStatus = (orderStatus, receivedDate) => {
-                    const status = orderStatus ? orderStatus.toString().trim() : '';
-                    
-                    // Check if marked as Received in Order Status OR has Received Date
-                    if (status === 'Received' || receivedDate) {
-                        return 'Received';
-                    }
-                    // Check if marked as Ordered
-                    else if (status === 'Ordered') {
-                        return 'Ordered';
-                    }
-                    // Default to Not Ordered
-                    else {
-                        return 'Not Ordered';
-                    }
-                };
-                
-                const bottleStatus = getStatus(row['Bottle Order Status'], row['Bottle Received Date']);
-                const boxStatus = getStatus(row['Box Order Status'], row['Box Received Date']);
-                const oilStatus = getStatus(row['Oil Order Status'], row['Oil Received Date']);
-                
-                return {
-                    id: row['Project ID'] || row['DCR'] || '',
-                    brand: row['Brand'] || '',
-                    finalName: row['Final Name'] || '',
-                    fragranceStatus: row['Fragrance Status'] || 'Pending',
-                    overallStatus: row['Overall Status'] || '',
-                    bottleStatus: bottleStatus,
-                    bottleETA: row['Bottle ETA'] ? parseDate(row['Bottle ETA']) : null,
-                    boxStatus: boxStatus,
-                    boxETA: row['Box ETA'] ? parseDate(row['Box ETA']) : null,
-                    oilStatus: oilStatus,
-                    oilETA: row['Oil ETA'] ? parseDate(row['Oil ETA']) : null,
-                    launchDate: row['Launch Date'] ? parseDate(row['Launch Date']) : null,
-                    imageUrl: row['Image URL'] || row['Image'] || '',
-                    riskLevel: row['Risk Level'] || '' // Optional: use existing risk if present
-                };
-            });
-
-            originalData = [...allData]; // Store original for reset
-            filteredData = [...allData];
-            populateFilters();
-            updateDashboard();
+            console.log('Processing Excel file... Size:', (data.byteLength / 1024).toFixed(1), 'KB');
             
-            // Show reset button after data loads
-            document.getElementById('reset-button').style.display = 'flex';
+            // Add loading indicator for large files
+            const loadingMsg = document.createElement('div');
+            loadingMsg.id = 'excel-loading-msg';
+            loadingMsg.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); color: white; padding: 2rem; border-radius: 12px; z-index: 10000; text-align: center;';
+            loadingMsg.innerHTML = '<div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div><div style="font-size: 1.2rem; font-weight: 600;">Processing Excel file...</div><div style="color: #95a5a6; margin-top: 0.5rem; font-size: 0.9rem;">This may take a moment for large files</div>';
+            document.body.appendChild(loadingMsg);
+            
+            // Use setTimeout to allow UI to update
+            setTimeout(() => {
+                try {
+                    // Parse Excel with optimizations
+                    const workbook = XLSX.read(data, { 
+                        type: 'array',
+                        cellStyles: false,  // Don't parse styles (faster)
+                        cellFormula: false, // Don't parse formulas (faster)
+                        sheetStubs: false   // Skip empty cells (faster)
+                    });
+                    
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+                        raw: false, // Keep dates as strings for faster parsing
+                        defval: ''  // Default value for empty cells
+                    });
+                    
+                    console.log('Excel parsed successfully. Rows:', jsonData.length);
+                    
+                    // Process data in batches to avoid browser freeze
+                    const batchSize = 50;
+                    const batches = [];
+                    
+                    for (let i = 0; i < jsonData.length; i += batchSize) {
+                        batches.push(jsonData.slice(i, i + batchSize));
+                    }
+                    
+                    allData = [];
+                    
+                    // Process each batch
+                    batches.forEach((batch, batchIndex) => {
+                        const processed = batch.map(row => {
+                            // Determine material statuses based on user's Excel structure
+                            const getStatus = (orderStatus, receivedDate) => {
+                                const status = orderStatus ? orderStatus.toString().trim() : '';
+                                
+                                if (status === 'Received' || receivedDate) {
+                                    return 'Received';
+                                }
+                                else if (status === 'Ordered') {
+                                    return 'Ordered';
+                                }
+                                else {
+                                    return 'Not Ordered';
+                                }
+                            };
+                            
+                            const bottleStatus = getStatus(row['Bottle Order Status'], row['Bottle Received Date']);
+                            const boxStatus = getStatus(row['Box Order Status'], row['Box Received Date']);
+                            const oilStatus = getStatus(row['Oil Order Status'], row['Oil Received Date']);
+                            
+                            return {
+                                id: row['Project ID'] || row['DCR'] || '',
+                                brand: row['Brand'] || '',
+                                finalName: row['Final Name'] || '',
+                                fragranceStatus: row['Fragrance Status'] || 'Pending',
+                                overallStatus: row['Overall Status'] || '',
+                                bottleStatus: bottleStatus,
+                                bottleETA: row['Bottle ETA'] ? parseDate(row['Bottle ETA']) : null,
+                                boxStatus: boxStatus,
+                                boxETA: row['Box ETA'] ? parseDate(row['Box ETA']) : null,
+                                oilStatus: oilStatus,
+                                oilETA: row['Oil ETA'] ? parseDate(row['Oil ETA']) : null,
+                                launchDate: row['Launch Date'] ? parseDate(row['Launch Date']) : null,
+                                imageUrl: row['Image URL'] || row['Image'] || '',
+                                riskLevel: row['Risk Level'] || ''
+                            };
+                        });
+                        
+                        allData = allData.concat(processed);
+                    });
+                    
+                    console.log('Data processing complete. Total items:', allData.length);
+                    
+                    originalData = [...allData]; // Store original for reset
+                    filteredData = [...allData];
+                    populateFilters();
+                    updateDashboard();
+                    
+                    // Remove loading indicator
+                    const loadingMsg = document.getElementById('excel-loading-msg');
+                    if (loadingMsg) loadingMsg.remove();
+                    
+                    // Show reset button after data loads
+                    document.getElementById('reset-button').style.display = 'flex';
+                    
+                } catch (error) {
+                    console.error('Error processing Excel file:', error);
+                    const loadingMsg = document.getElementById('excel-loading-msg');
+                    if (loadingMsg) loadingMsg.remove();
+                    alert('Error processing Excel file. The file may be too large or corrupted. Try reducing the number of images or image quality.');
+                }
+            }, 100); // Small delay to allow UI to update
         }
 
         function parseDate(value) {
